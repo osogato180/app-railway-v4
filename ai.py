@@ -23,25 +23,21 @@ def _r():
     return _redis
 
 
-ddef get_embedding(text: str, task_type: str = "RETRIEVAL_QUERY") -> list[float]:
-
-    if task_type == "RETRIEVAL_QUERY":
-        key = "emb:" + hashlib.md5((task_type + text).encode()).hexdigest()
-        cached = _r().get(key)
-        if cached:
-            return json.loads(cached)
-
+def get_embedding(text: str, task_type: str = "RETRIEVAL_QUERY") -> list[float]:
+    key = "emb:" + hashlib.md5((task_type + text).encode()).hexdigest()
+    cached = _r().get(key)
+    if cached:
+        return json.loads(cached)
     response = _gc().models.embed_content(
         model=EMBED_MODEL,
         contents=text,
-        config={"task_type": task_type}
+        config=types.EmbedContentConfig(
+            task_type=task_type,
+            output_dimensionality=768,
+        ),
     )
-    
     vec = response.embeddings[0].values
-
-    if task_type == "RETRIEVAL_QUERY":
-        _r().set(key, json.dumps(vec), ex=86400)
-
+    _r().set(key, json.dumps(vec), ex=86400)
     return vec
 
 
